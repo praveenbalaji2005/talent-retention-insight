@@ -67,16 +67,16 @@ export function useRunAnalysis() {
         // Run mock analysis (simulates ML backend)
         const analysisData = await runMockAnalysis(dataset.raw_data as Record<string, unknown>[]);
         
-        // Update with results - cast to unknown first for JSONB compatibility
+        // Update with results - use JSON.parse/stringify for proper JSONB compatibility
         const { data: updatedRecord, error: updateError } = await supabase
           .from('analysis_results')
           .update({
             status: 'completed',
-            results: analysisData.results as unknown as Record<string, unknown>,
-            predictions: analysisData.predictions as unknown as Record<string, unknown>[],
-            feature_importance: analysisData.feature_importance as unknown as Record<string, unknown>[],
-            topics: analysisData.topics as unknown as Record<string, unknown>[],
-            recommendations: analysisData.recommendations as unknown as Record<string, unknown>[],
+            results: JSON.parse(JSON.stringify(analysisData.results)),
+            predictions: JSON.parse(JSON.stringify(analysisData.predictions)),
+            feature_importance: JSON.parse(JSON.stringify(analysisData.feature_importance)),
+            topics: JSON.parse(JSON.stringify(analysisData.topics)),
+            recommendations: JSON.parse(JSON.stringify(analysisData.recommendations)),
             completed_at: new Date().toISOString(),
           })
           .eq('id', analysisRecord.id)
