@@ -1,13 +1,13 @@
-import { useState, useCallback } from 'react';
-import { Upload, FileSpreadsheet, AlertCircle, CheckCircle } from 'lucide-react';
+import { useState, useCallback, useMemo } from 'react';
+import { Upload, AlertCircle, CheckCircle, Info } from 'lucide-react';
 import Papa from 'papaparse';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { useUploadDataset } from '@/hooks/useDatasets';
 import { cn } from '@/lib/utils';
 
@@ -15,17 +15,40 @@ interface DatasetUploadProps {
   onSuccess?: () => void;
 }
 
+// Column detection for different dataset formats
+const detectDatasetFormat = (cols: string[]): { type: string; label: string; color: string } => {
+  const lowerCols = cols.map(c => c.toLowerCase());
+  
+  // AmbitionBox format (reviews)
+  if (lowerCols.some(c => ['overall_rating', 'work_life_balance', 'skill_development', 'salary_and_benefits'].includes(c))) {
+    return { type: 'ambitionbox', label: 'Employee Reviews', color: 'bg-accent/20 text-accent' };
+  }
+  
+  // Kaggle HR format
+  if (lowerCols.some(c => ['satisfaction_level', 'number_project', 'time_spend_company'].includes(c))) {
+    return { type: 'kaggle', label: 'Kaggle HR Analytics', color: 'bg-secondary/20 text-secondary' };
+  }
+  
+  // IBM format
+  if (lowerCols.some(c => ['jobsatisfaction', 'attrition', 'monthlyincome', 'yearsatcompany'].includes(c))) {
+    return { type: 'ibm', label: 'IBM HR Analytics', color: 'bg-primary/20 text-primary' };
+  }
+  
+  return { type: 'generic', label: 'Generic Dataset', color: 'bg-muted text-muted-foreground' };
+};
+
 export function DatasetUpload({ onSuccess }: DatasetUploadProps) {
   const [file, setFile] = useState<File | null>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [fileType, setFileType] = useState<'attrition' | 'reviews'>('attrition');
   const [parsedData, setParsedData] = useState<Record<string, unknown>[] | null>(null);
   const [columns, setColumns] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
   const uploadMutation = useUploadDataset();
+  
+  const detectedFormat = useMemo(() => detectDatasetFormat(columns), [columns]);
 
   const handleFileParse = useCallback((file: File) => {
     setError(null);
@@ -70,7 +93,7 @@ export function DatasetUpload({ onSuccess }: DatasetUploadProps) {
     setIsDragging(false);
     
     const droppedFile = e.dataTransfer.files[0];
-    if (droppedFile && droppedFile.type === 'text/csv') {
+    if (droppedFile && (droppedFile.type === 'text/csv' || droppedFile.name.endsWith('.csv'))) {
       setFile(droppedFile);
       handleFileParse(droppedFile);
     } else {
@@ -99,12 +122,11 @@ export function DatasetUpload({ onSuccess }: DatasetUploadProps) {
       await uploadMutation.mutateAsync({
         name,
         description: description || undefined,
-        file_type: fileType,
+        file_type: detectedFormat.type === 'ambitionbox' ? 'reviews' : 'attrition',
         raw_data: parsedData,
         column_names: columns,
       });
       
-      // Reset form
       setFile(null);
       setName('');
       setDescription('');
@@ -117,49 +139,31 @@ export function DatasetUpload({ onSuccess }: DatasetUploadProps) {
     }
   };
 
-  const requiredColumns = fileType === 'attrition' 
-    ? ['Attrition', 'Department']
-    : ['Overall_rating'];
-  
-  const missingColumns = requiredColumns.filter(col => !columns.includes(col));
-  const hasRequiredColumns = missingColumns.length === 0;
+  // Key columns for display
+  const keyColumns = columns.filter(col => {
+    const lower = col.toLowerCase();
+    return [
+      'overall_rating', 'work_life_balance', 'satisfaction', 'attrition', 
+      'department', 'salary', 'age', 'jobsatisfaction', 'work_satisfaction',
+      'career_growth', 'job_security', 'number_project', 'satisfaction_level'
+    ].some(k => lower.includes(k));
+  });
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Upload Dataset</CardTitle>
-        <CardDescription>
-          Upload a CSV file containing employee data for analysis
+    <Card className="border-0 shadow-none">
+      <CardHeader className="px-0 pt-0">
+        <CardTitle className="text-lg">Upload Dataset</CardTitle>
+        <CardDescription className="text-xs">
+          Supports IBM HR, Kaggle Analytics, and AmbitionBox review formats
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* File Type Selection */}
-          <div className="space-y-3">
-            <Label>Dataset Type</Label>
-            <RadioGroup
-              value={fileType}
-              onValueChange={(v) => setFileType(v as 'attrition' | 'reviews')}
-              className="flex gap-4"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="attrition" id="attrition" />
-                <Label htmlFor="attrition" className="font-normal cursor-pointer">
-                  Employee Attrition Data
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="reviews" id="reviews" />
-                <Label htmlFor="reviews" className="font-normal cursor-pointer">
-                  Company Reviews
-                </Label>
-              </div>
-            </RadioGroup>
-            <p className="text-sm text-muted-foreground">
-              {fileType === 'attrition' 
-                ? 'Required columns: Attrition, Department'
-                : 'Required columns: Overall_rating'}
-            </p>
+      <CardContent className="px-0 pb-0">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Supported Formats */}
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20">IBM HR</Badge>
+            <Badge variant="outline" className="text-xs bg-secondary/10 text-secondary border-secondary/20">Kaggle</Badge>
+            <Badge variant="outline" className="text-xs bg-accent/10 text-accent border-accent/20">AmbitionBox</Badge>
           </div>
 
           {/* Drop Zone */}
@@ -168,24 +172,29 @@ export function DatasetUpload({ onSuccess }: DatasetUploadProps) {
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             className={cn(
-              'border-2 border-dashed rounded-xl p-8 text-center transition-colors',
-              isDragging ? 'border-primary bg-primary/5' : 'border-border',
+              'relative border-2 border-dashed rounded-lg p-6 text-center transition-all cursor-pointer',
+              isDragging ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50',
               file ? 'bg-success/5 border-success' : ''
             )}
           >
             {file ? (
               <div className="flex flex-col items-center gap-2">
-                <CheckCircle className="h-10 w-10 text-success" />
-                <p className="font-medium">{file.name}</p>
-                <p className="text-sm text-muted-foreground">
-                  {parsedData?.length || 0} rows • {columns.length} columns
-                </p>
+                <CheckCircle className="h-8 w-8 text-success" />
+                <p className="font-medium text-sm">{file.name}</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">
+                    {parsedData?.length.toLocaleString()} rows • {columns.length} columns
+                  </span>
+                  <Badge className={cn('text-xs', detectedFormat.color)}>
+                    {detectedFormat.label}
+                  </Badge>
+                </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center gap-2">
-                <Upload className="h-10 w-10 text-muted-foreground" />
-                <p className="font-medium">Drop your CSV file here</p>
-                <p className="text-sm text-muted-foreground">or click to browse</p>
+              <div className="flex flex-col items-center gap-1">
+                <Upload className="h-8 w-8 text-muted-foreground" />
+                <p className="font-medium text-sm">Drop CSV file here</p>
+                <p className="text-xs text-muted-foreground">or click to browse</p>
               </div>
             )}
             <Input
@@ -196,78 +205,78 @@ export function DatasetUpload({ onSuccess }: DatasetUploadProps) {
             />
           </div>
 
-          {/* Validation Messages */}
+          {/* Error */}
           {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Error</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
+            <Alert variant="destructive" className="py-2">
+              <AlertCircle className="h-3 w-3" />
+              <AlertDescription className="text-xs ml-2">{error}</AlertDescription>
             </Alert>
           )}
 
-          {parsedData && !hasRequiredColumns && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Missing Required Columns</AlertTitle>
-              <AlertDescription>
-                The following columns are required: {missingColumns.join(', ')}
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {/* Column Preview */}
-          {columns.length > 0 && (
-            <div className="space-y-2">
-              <Label>Detected Columns</Label>
-              <div className="flex flex-wrap gap-2">
-                {columns.map((col) => (
-                  <span
-                    key={col}
-                    className={cn(
-                      'px-2 py-1 rounded-md text-xs font-medium',
-                      requiredColumns.includes(col)
-                        ? 'bg-success/20 text-success'
-                        : 'bg-muted text-muted-foreground'
-                    )}
-                  >
+          {/* Detected Key Columns */}
+          {keyColumns.length > 0 && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Key Columns Detected</Label>
+              <div className="flex flex-wrap gap-1">
+                {keyColumns.slice(0, 8).map((col) => (
+                  <Badge key={col} variant="secondary" className="text-xs py-0">
                     {col}
-                  </span>
+                  </Badge>
                 ))}
+                {keyColumns.length > 8 && (
+                  <Badge variant="outline" className="text-xs py-0">
+                    +{keyColumns.length - 8} more
+                  </Badge>
+                )}
               </div>
             </div>
           )}
 
+          {/* Column-flexible notice */}
+          {parsedData && detectedFormat.type === 'generic' && (
+            <Alert className="py-2 bg-muted/50 border-muted">
+              <Info className="h-3 w-3" />
+              <AlertTitle className="text-xs">Column-Flexible Analysis</AlertTitle>
+              <AlertDescription className="text-xs">
+                The system will analyze available columns automatically
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Dataset Name */}
-          <div className="space-y-2">
-            <Label htmlFor="name">Dataset Name</Label>
+          <div className="space-y-1">
+            <Label htmlFor="name" className="text-xs">Dataset Name</Label>
             <Input
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Q4 2024 Employee Data"
+              placeholder="e.g., Amazon_Reviews_2024"
+              className="h-8 text-sm"
               required
             />
           </div>
 
           {/* Description */}
-          <div className="space-y-2">
-            <Label htmlFor="description">Description (optional)</Label>
+          <div className="space-y-1">
+            <Label htmlFor="description" className="text-xs">Description (optional)</Label>
             <Textarea
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Brief description of this dataset..."
-              rows={3}
+              placeholder="Brief description..."
+              className="text-sm min-h-[60px]"
+              rows={2}
             />
           </div>
 
           {/* Submit */}
           <Button
             type="submit"
-            disabled={!parsedData || !hasRequiredColumns || uploadMutation.isPending}
-            className="w-full"
+            disabled={!parsedData || uploadMutation.isPending}
+            className="w-full h-9"
+            size="sm"
           >
-            {uploadMutation.isPending ? 'Uploading...' : 'Upload Dataset'}
+            {uploadMutation.isPending ? 'Uploading...' : 'Upload & Analyze'}
           </Button>
         </form>
       </CardContent>
