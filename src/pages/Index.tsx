@@ -1,12 +1,45 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from 'react';
+import { Header } from '@/components/layout/Header';
+import { Dashboard } from '@/components/dashboard/Dashboard';
+import { DatasetsView } from '@/components/datasets/DatasetsView';
+import { AnalysisView } from '@/components/analysis/AnalysisView';
+import { SettingsView } from '@/components/settings/SettingsView';
+import type { Dataset } from '@/types/dataset';
+
+type View = 'dashboard' | 'datasets' | 'analysis' | 'settings';
 
 const Index = () => {
+  const [currentView, setCurrentView] = useState<View>('dashboard');
+
+  const handleViewChange = (view: View) => {
+    setCurrentView(view);
+  };
+
+  const handleSelectDataset = (_dataset: Dataset) => {
+    setCurrentView('analysis');
+  };
+
+  const renderView = () => {
+    switch (currentView) {
+      case 'dashboard':
+        return <Dashboard onNavigate={handleViewChange} />;
+      case 'datasets':
+        return <DatasetsView onSelectDataset={handleSelectDataset} />;
+      case 'analysis':
+        return <AnalysisView />;
+      case 'settings':
+        return <SettingsView />;
+      default:
+        return <Dashboard onNavigate={handleViewChange} />;
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
+    <div className="min-h-screen bg-background">
+      <Header currentView={currentView} onViewChange={handleViewChange} />
+      <main className="container mx-auto px-4 py-6">
+        {renderView()}
+      </main>
     </div>
   );
 };

@@ -54,7 +54,7 @@ export function useUploadDataset() {
           name: params.name,
           description: params.description || null,
           file_type: params.file_type,
-          raw_data: params.raw_data as unknown as Record<string, unknown>,
+          raw_data: JSON.parse(JSON.stringify(params.raw_data)),
           column_names: params.column_names,
           row_count: params.raw_data.length,
         }])
