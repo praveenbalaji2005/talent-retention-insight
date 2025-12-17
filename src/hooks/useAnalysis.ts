@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { AnalysisResult, Dataset } from '@/types/dataset';
-import { runMockAnalysis } from '@/lib/mockAnalysis';
 import { toast } from 'sonner';
 
 export function useAnalysisResults(datasetId: string | undefined) {
@@ -64,10 +63,15 @@ export function useRunAnalysis() {
       if (insertError) throw insertError;
       
       try {
-        // Run mock analysis (simulates ML backend)
-        const analysisData = await runMockAnalysis(dataset.raw_data as Record<string, unknown>[]);
+        // Call ML backend edge function
+        const { data: analysisData, error: fnError } = await supabase.functions.invoke('analyze-dataset', {
+          body: { raw_data: dataset.raw_data }
+        });
         
-        // Update with results - use JSON.parse/stringify for proper JSONB compatibility
+        if (fnError) throw fnError;
+        if (!analysisData.success) throw new Error(analysisData.error || 'Analysis failed');
+        
+        // Update with results
         const { data: updatedRecord, error: updateError } = await supabase
           .from('analysis_results')
           .update({
