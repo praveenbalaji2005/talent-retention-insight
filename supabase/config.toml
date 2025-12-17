@@ -1,1 +1,4 @@
 project_id = "thsohnazjwiaxaidsisx"
+
+[functions.analyze-dataset]
+verify_jwt = false
