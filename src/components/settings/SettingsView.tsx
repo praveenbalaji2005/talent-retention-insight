@@ -226,7 +226,7 @@ interface PredictionData {
   employee_id: string | number;
   department: string;
   risk_score: number;
-  risk_level: 'low' | 'medium' | 'high' | 'critical';
+  risk_level: 'low' | 'early_warning' | 'moderate' | 'high' | 'critical';
   attrition_probability: number;
   factors: string[];
 }
