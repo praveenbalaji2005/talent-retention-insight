@@ -42,7 +42,8 @@ export interface DepartmentBreakdown {
 
 export interface RiskDistribution {
   low: number;
-  medium: number;
+  early_warning: number;
+  moderate: number;
   high: number;
   critical: number;
 }
@@ -51,9 +52,10 @@ export interface PredictionData {
   employee_id: string | number;
   department: string;
   risk_score: number;
-  risk_level: 'low' | 'medium' | 'high' | 'critical';
+  risk_level: 'low' | 'early_warning' | 'moderate' | 'high' | 'critical';
   attrition_probability: number;
   factors: string[];
+  shap_values?: { feature: string; value: number; contribution: number }[];
 }
 
 export interface FeatureImportance {
@@ -67,9 +69,13 @@ export interface TopicData {
   topic_id: number;
   name: string;
   keywords: string[];
+  keyword_weights?: number[];
   prevalence: number;
   sentiment: 'positive' | 'neutral' | 'negative';
+  sentiment_score?: number;
+  attrition_correlation?: number;
   sample_reviews: string[];
+  document_count?: number;
 }
 
 export interface Recommendation {

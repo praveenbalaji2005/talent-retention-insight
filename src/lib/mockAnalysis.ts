@@ -261,7 +261,11 @@ export function generateMockPredictions(data: Record<string, unknown>[]): Predic
   
   return data.map((row, index) => {
     const riskScore = calculateRiskScore(row, datasetType);
-    const riskLevel = riskScore < 0.25 ? 'low' : riskScore < 0.5 ? 'medium' : riskScore < 0.75 ? 'high' : 'critical';
+    // Five-tier classification matching backend
+    const riskLevel = riskScore < 0.20 ? 'low' : 
+                      riskScore < 0.40 ? 'early_warning' : 
+                      riskScore < 0.60 ? 'moderate' : 
+                      riskScore < 0.80 ? 'high' : 'critical';
     
     const factors: string[] = [];
     
@@ -348,7 +352,8 @@ export function generateMockResults(data: Record<string, unknown>[], predictions
     department_breakdown: departmentBreakdown,
     risk_distribution: {
       low: predictions.filter(p => p.risk_level === 'low').length,
-      medium: predictions.filter(p => p.risk_level === 'medium').length,
+      early_warning: predictions.filter(p => p.risk_level === 'early_warning').length,
+      moderate: predictions.filter(p => p.risk_level === 'moderate').length,
       high: predictions.filter(p => p.risk_level === 'high').length,
       critical: predictions.filter(p => p.risk_level === 'critical').length,
     },
