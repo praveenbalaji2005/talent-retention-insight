@@ -290,7 +290,7 @@ class SHAPExplainer:
     
     def _calculate_shapley_value(self, x: np.ndarray, feature_idx: int, 
                                   X_background: np.ndarray, n_samples: int = 100) -> float:
-        """
+        r"""
         Calculate Shapley value for a single feature using Monte Carlo sampling
         
         φᵢ(x) = Σ_{S⊆N\{i}} [|S|!(|N|-|S|-1)!/|N|!] * [f(S∪{i}) - f(S)]
