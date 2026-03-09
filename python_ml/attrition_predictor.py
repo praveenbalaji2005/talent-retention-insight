@@ -1107,8 +1107,8 @@ Examples:
     
     parser.add_argument('--data', type=str, help='Path to CSV dataset')
     parser.add_argument('--demo', action='store_true', help='Run with sample data')
-    parser.add_argument('--text-column', type=str, default='Review', 
-                       help='Column name containing text reviews for LDA')
+    parser.add_argument('--text-column', type=str, default=None, 
+                       help='Column name containing text reviews for LDA (auto-detected if not specified)')
     parser.add_argument('--output', type=str, default='attrition_results.json',
                        help='Output file for results')
     parser.add_argument('--epochs', type=int, default=100, help='Training epochs')
