@@ -708,14 +708,17 @@ class DataPreprocessor:
     
     # Column mappings for different dataset formats
     COLUMN_MAPPINGS = {
-        'satisfaction': ['JobSatisfaction', 'satisfaction_level', 'Rating', 'EnvironmentSatisfaction'],
+        'satisfaction': ['JobSatisfaction', 'satisfaction_level', 'Rating', 'EnvironmentSatisfaction',
+                         'Overall_rating', 'work_satisfaction', 'overall_rating'],
         'tenure': ['YearsAtCompany', 'tenure', 'TotalWorkingYears', 'YearsInCurrentRole'],
-        'overtime': ['OverTime', 'average_montly_hours', 'WorkLifeBalance'],
-        'salary': ['MonthlyIncome', 'salary', 'DailyRate', 'HourlyRate'],
+        'overtime': ['OverTime', 'average_montly_hours', 'WorkLifeBalance', 'work_life_balance'],
+        'salary': ['MonthlyIncome', 'salary', 'DailyRate', 'HourlyRate', 'salary_and_benefits'],
         'department': ['Department', 'department', 'JobRole'],
-        'promotion': ['YearsSinceLastPromotion', 'promotion_last_5years'],
+        'promotion': ['YearsSinceLastPromotion', 'promotion_last_5years', 'career_growth'],
         'projects': ['NumCompaniesWorked', 'number_project'],
-        'attrition': ['Attrition', 'left', 'Status']
+        'attrition': ['Attrition', 'left', 'Status'],
+        'skill_dev': ['skill_development'],
+        'job_security': ['job_security'],
     }
     
     def __init__(self):
