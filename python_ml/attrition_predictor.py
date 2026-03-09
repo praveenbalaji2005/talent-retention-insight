@@ -518,7 +518,9 @@ class LDATopicModel:
                     self.topic_counts[new_topic] += 1
         
         # Calculate final topic-word distribution
-        self.topic_word_dist = self.word_topic_counts.T / self.word_topic_counts.sum(axis=0)
+        # word_topic_counts shape: (n_vocab, n_topics), topic_word_dist shape: (n_topics, n_vocab)
+        topic_sums = self.word_topic_counts.sum(axis=0, keepdims=True)  # (1, n_topics)
+        self.topic_word_dist = (self.word_topic_counts / topic_sums).T  # (n_topics, n_vocab)
         
         return topic_assignments
     
