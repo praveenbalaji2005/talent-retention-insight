@@ -290,7 +290,7 @@ class SHAPExplainer:
     
     def _calculate_shapley_value(self, x: np.ndarray, feature_idx: int, 
                                   X_background: np.ndarray, n_samples: int = 100) -> float:
-        """
+        r"""
         Calculate Shapley value for a single feature using Monte Carlo sampling
         
         φᵢ(x) = Σ_{S⊆N\{i}} [|S|!(|N|-|S|-1)!/|N|!] * [f(S∪{i}) - f(S)]
@@ -518,7 +518,9 @@ class LDATopicModel:
                     self.topic_counts[new_topic] += 1
         
         # Calculate final topic-word distribution
-        self.topic_word_dist = self.word_topic_counts.T / self.word_topic_counts.sum(axis=0)
+        # word_topic_counts shape: (n_vocab, n_topics), topic_word_dist shape: (n_topics, n_vocab)
+        topic_sums = self.word_topic_counts.sum(axis=0, keepdims=True)  # (1, n_topics)
+        self.topic_word_dist = (self.word_topic_counts / topic_sums).T  # (n_topics, n_vocab)
         
         return topic_assignments
     
@@ -706,14 +708,17 @@ class DataPreprocessor:
     
     # Column mappings for different dataset formats
     COLUMN_MAPPINGS = {
-        'satisfaction': ['JobSatisfaction', 'satisfaction_level', 'Rating', 'EnvironmentSatisfaction'],
+        'satisfaction': ['JobSatisfaction', 'satisfaction_level', 'Rating', 'EnvironmentSatisfaction',
+                         'Overall_rating', 'work_satisfaction', 'overall_rating'],
         'tenure': ['YearsAtCompany', 'tenure', 'TotalWorkingYears', 'YearsInCurrentRole'],
-        'overtime': ['OverTime', 'average_montly_hours', 'WorkLifeBalance'],
-        'salary': ['MonthlyIncome', 'salary', 'DailyRate', 'HourlyRate'],
+        'overtime': ['OverTime', 'average_montly_hours', 'WorkLifeBalance', 'work_life_balance'],
+        'salary': ['MonthlyIncome', 'salary', 'DailyRate', 'HourlyRate', 'salary_and_benefits'],
         'department': ['Department', 'department', 'JobRole'],
-        'promotion': ['YearsSinceLastPromotion', 'promotion_last_5years'],
+        'promotion': ['YearsSinceLastPromotion', 'promotion_last_5years', 'career_growth'],
         'projects': ['NumCompaniesWorked', 'number_project'],
-        'attrition': ['Attrition', 'left', 'Status']
+        'attrition': ['Attrition', 'left', 'Status'],
+        'skill_dev': ['skill_development'],
+        'job_security': ['job_security'],
     }
     
     def __init__(self):
@@ -933,10 +938,21 @@ class AttritionAnalyzer:
         
         # Step 5: LDA topic modeling (if text data available)
         lda_results = None
-        if text_column and text_column in data.columns:
-            documents = data[text_column].dropna().tolist()
-            if len(documents) > 10:
-                lda_results = self.lda_model.fit_transform(documents)
+        # Auto-detect text columns for AmbitionBox-style datasets
+        text_candidates = [text_column] if text_column else []
+        text_candidates += ['Likes', 'Dislikes', 'Review', 'Comments', 'Feedback']
+        
+        documents = []
+        for tc in text_candidates:
+            if tc and tc in data.columns:
+                docs = data[tc].dropna().astype(str).tolist()
+                if not documents:
+                    documents = docs
+                else:
+                    documents = [f"{a} {b}" for a, b in zip(documents, docs)]
+        
+        if len(documents) > 10:
+            lda_results = self.lda_model.fit_transform(documents)
         
         # Step 6: Risk classification
         risk_classifications = [classify_risk(p) for p in predictions]
@@ -1091,8 +1107,8 @@ Examples:
     
     parser.add_argument('--data', type=str, help='Path to CSV dataset')
     parser.add_argument('--demo', action='store_true', help='Run with sample data')
-    parser.add_argument('--text-column', type=str, default='Review', 
-                       help='Column name containing text reviews for LDA')
+    parser.add_argument('--text-column', type=str, default=None, 
+                       help='Column name containing text reviews for LDA (auto-detected if not specified)')
     parser.add_argument('--output', type=str, default='attrition_results.json',
                        help='Output file for results')
     parser.add_argument('--epochs', type=int, default=100, help='Training epochs')
