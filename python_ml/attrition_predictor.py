@@ -938,10 +938,21 @@ class AttritionAnalyzer:
         
         # Step 5: LDA topic modeling (if text data available)
         lda_results = None
-        if text_column and text_column in data.columns:
-            documents = data[text_column].dropna().tolist()
-            if len(documents) > 10:
-                lda_results = self.lda_model.fit_transform(documents)
+        # Auto-detect text columns for AmbitionBox-style datasets
+        text_candidates = [text_column] if text_column else []
+        text_candidates += ['Likes', 'Dislikes', 'Review', 'Comments', 'Feedback']
+        
+        documents = []
+        for tc in text_candidates:
+            if tc and tc in data.columns:
+                docs = data[tc].dropna().astype(str).tolist()
+                if not documents:
+                    documents = docs
+                else:
+                    documents = [f"{a} {b}" for a, b in zip(documents, docs)]
+        
+        if len(documents) > 10:
+            lda_results = self.lda_model.fit_transform(documents)
         
         # Step 6: Risk classification
         risk_classifications = [classify_risk(p) for p in predictions]
